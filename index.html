@@ -1,0 +1,452 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NEXUS AI REAL</title>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #070b18;
+  color: white;
+  font-family: Arial, sans-serif;
+}
+
+header {
+  text-align: center;
+  padding: 22px;
+  background: #101b32;
+  border-bottom: 1px solid #00d9ff;
+}
+
+.logo {
+  font-size: 35px;
+  font-weight: 900;
+  letter-spacing: 5px;
+  color: #00e5ff;
+  text-shadow: 0 0 20px #00e5ff;
+}
+
+#status {
+  color: #8faecb;
+  font-size: 12px;
+  margin-top: 10px;
+}
+
+main {
+  width: 94%;
+  max-width: 750px;
+  margin: 25px auto;
+}
+
+h2 {
+  text-align: center;
+}
+
+#chat {
+  height: 48vh;
+  min-height: 280px;
+  overflow-y: auto;
+  background: #101a30;
+  border: 1px solid #24466d;
+  border-radius: 15px;
+  padding: 14px;
+}
+
+.message {
+  padding: 13px;
+  border-radius: 12px;
+  margin: 10px 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+}
+
+.bot {
+  background: #172d4c;
+  border-left: 3px solid #00e5ff;
+}
+
+.user {
+  background: #174a70;
+  margin-left: 12%;
+}
+
+.controls {
+  display: flex;
+  gap: 8px;
+  margin-top: 13px;
+}
+
+input {
+  min-width: 0;
+  flex: 1;
+  padding: 14px;
+  border: 1px solid #28608b;
+  border-radius: 12px;
+  background: #101a30;
+  color: white;
+  outline: none;
+  font-size: 15px;
+}
+
+button {
+  border: 0;
+  padding: 12px;
+  border-radius: 10px;
+  background: #00d9ff;
+  color: #00121c;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: .5;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin: 15px 0;
+}
+
+.actions button {
+  background: #193657;
+  color: white;
+  border: 1px solid #32628c;
+}
+
+#activate {
+  width: 100%;
+  padding: 16px;
+  margin: 15px 0;
+  font-size: 16px;
+}
+
+footer {
+  text-align: center;
+  padding: 25px;
+  color: #8098b7;
+  font-size: 12px;
+}
+
+</style>
+</head>
+
+<body>
+
+<header>
+  <div class="logo">NEXUS AI</div>
+  <div id="status">● IA DESCONECTADA</div>
+</header>
+
+<main>
+
+  <h2>Tu inteligencia artificial</h2>
+
+  <p style="text-align:center;color:#9eb5d1">
+    Preguntame lo que quieras. Estoy listo para aprender y ayudarte.
+  </p>
+
+  <button id="activate">🧠 ACTIVAR INTELIGENCIA ARTIFICIAL</button>
+
+  <div id="chat">
+    <div class="message bot">
+      ¡Hola! Soy NEXUS. Activá mi inteligencia artificial
+      para comenzar nuestra conversación.
+    </div>
+  </div>
+
+  <div class="controls">
+    <input
+      id="question"
+      placeholder="Escribí tu pregunta..."
+      autocomplete="off"
+    >
+    <button id="send">➤</button>
+  </div>
+
+  <div class="actions">
+    <button onclick="voice()">🎙️ Voz</button>
+    <button onclick="readAnswer()">🔊 Escuchar</button>
+    <button onclick="searchGoogle()">🌐 Google</button>
+    <button onclick="clearChat()">🗑️ Borrar</button>
+  </div>
+
+</main>
+
+<footer>
+  NEXUS AI REAL · MODELO LOCAL · 2026
+</footer>
+
+<script type="module">
+
+import { pipeline } from
+"https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.2";
+
+const MODEL = "onnx-community/LFM2.5-350M-ONNX";
+
+const status = document.getElementById("status");
+const chat = document.getElementById("chat");
+const question = document.getElementById("question");
+const activate = document.getElementById("activate");
+const send = document.getElementById("send");
+
+let ai = null;
+let busy = false;
+let history = [];
+let lastAnswer = "";
+
+function message(text, type) {
+  const div = document.createElement("div");
+  div.className = "message " + type;
+  div.textContent = text;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+  return div;
+}
+
+// CARGAR EL MODELO REAL
+
+async function loadAI() {
+
+  if (ai || busy) return;
+
+  busy = true;
+  activate.disabled = true;
+  status.textContent = "⏳ DESCARGANDO MODELO...";
+
+  try {
+
+    ai = await pipeline(
+      "text-generation",
+      MODEL,
+      {
+        dtype: "q4",
+
+        progress_callback: (info) => {
+
+          if (
+            info.status === "progress" &&
+            info.total
+          ) {
+            status.textContent =
+              "⏳ DESCARGANDO: " +
+              Math.round(info.progress) + "%";
+          }
+
+        }
+      }
+    );
+
+    status.textContent = "🟢 NEXUS IA ACTIVA";
+    activate.textContent = "🟢 IA ACTIVADA";
+
+    message(
+      "¡Sistema listo! Ya podés conversar conmigo.",
+      "bot"
+    );
+
+  } catch (error) {
+
+    console.error(error);
+
+    status.textContent = "🔴 ERROR AL CARGAR";
+
+    message(
+      "No pude cargar el modelo. Revisá tu conexión, " +
+      "espacio disponible y volvé a intentar.",
+      "bot"
+    );
+
+    activate.disabled = false;
+
+  } finally {
+    busy = false;
+  }
+}
+
+activate.addEventListener("click", loadAI);
+
+// ENVIAR PREGUNTAS A LA IA
+
+async function askAI() {
+
+  const text = question.value.trim();
+
+  if (!text || busy) return;
+
+  if (!ai) {
+    message(
+      "Primero tenés que activar la inteligencia artificial.",
+      "bot"
+    );
+    return;
+  }
+
+  question.value = "";
+
+  message(text, "user");
+
+  history.push({
+    role: "user",
+    content: text
+  });
+
+  const loading = message(
+    "NEXUS está pensando...",
+    "bot"
+  );
+
+  busy = true;
+  send.disabled = true;
+
+  try {
+
+    const messages = [
+      {
+        role: "system",
+        content:
+          "Sos NEXUS, un asistente inteligente. " +
+          "Respondé siempre en español, de forma clara, " +
+          "amable y útil. Si no sabés algo, reconocelo."
+      },
+      ...history.slice(-10)
+    ];
+
+    const result = await ai(messages, {
+      max_new_tokens: 180,
+      do_sample: false,
+      repetition_penalty: 1.05
+    });
+
+    const generated = result[0].generated_text;
+    const finalMessage = generated[generated.length - 1];
+
+    const answer =
+      typeof finalMessage === "string"
+        ? finalMessage
+        : finalMessage.content;
+
+    loading.textContent = answer;
+    lastAnswer = answer;
+
+    history.push({
+      role: "assistant",
+      content: answer
+    });
+
+  } catch (error) {
+
+    console.error(error);
+
+    loading.textContent =
+      "Tuve un problema generando la respuesta. " +
+      "Probá con una pregunta más corta.";
+
+    history.pop();
+
+  } finally {
+
+    busy = false;
+    send.disabled = false;
+    chat.scrollTop = chat.scrollHeight;
+
+  }
+}
+
+send.addEventListener("click", askAI);
+
+question.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") askAI();
+});
+
+// RECONOCIMIENTO DE VOZ
+
+window.voice = function() {
+
+  const Recognition =
+    window.SpeechRecognition ||
+    window.webkitSpeechRecognition;
+
+  if (!Recognition) {
+    alert("Tu navegador no admite reconocimiento de voz.");
+    return;
+  }
+
+  const recognition = new Recognition();
+
+  recognition.lang = "es-AR";
+
+  recognition.onresult = (event) => {
+    question.value =
+      event.results[0][0].transcript;
+  };
+
+  recognition.start();
+};
+
+// LEER RESPUESTAS
+
+window.readAnswer = function() {
+
+  if (!lastAnswer) {
+    alert("Todavía no hay respuestas.");
+    return;
+  }
+
+  if (!window.speechSynthesis) {
+    alert("Tu navegador no admite lectura de voz.");
+    return;
+  }
+
+  speechSynthesis.cancel();
+
+  const speech =
+    new SpeechSynthesisUtterance(lastAnswer);
+
+  speech.lang = "es-AR";
+  speechSynthesis.speak(speech);
+};
+
+// GOOGLE
+
+window.searchGoogle = function() {
+
+  const query = prompt("¿Qué querés buscar?");
+
+  if (query && query.trim()) {
+    window.open(
+      "https://www.google.com/search?q=" +
+      encodeURIComponent(query),
+      "_blank"
+    );
+  }
+};
+
+// LIMPIAR CHAT
+
+window.clearChat = function() {
+
+  history = [];
+  lastAnswer = "";
+  chat.replaceChildren();
+
+  message(
+    "Conversación reiniciada. ¡Hola de nuevo!",
+    "bot"
+  );
+};
+
+</script>
+
+</body>
+  </html>
+  
